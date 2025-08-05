@@ -1,0 +1,20 @@
+name: Upload Build Artifact
+
+description: |
+  This composite action will upload build artifacts with version and environment metadata.
+
+inputs:
+  version:
+    description: 'Version of the build'
+    required: true
+  env:
+    description: 'The environment (dev/stage/prod)'
+    required: true
+
+runs:
+  using: "composite"
+  steps:
+    - name: Upload to Artifact Repository
+      run: |
+        echo "Uploading build artifact with version: ${{ inputs.version }} to ${{ inputs.env }}"
+        # Upload artifact logic goes here (e.g., using an upload tool like AWS S3 or Artifactory)
