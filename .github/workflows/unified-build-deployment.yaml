@@ -14,11 +14,6 @@ on:
         required: false
         type: boolean
         default: false
-    secrets:
-      OIDC_TOKEN:
-        required: false
-      CUSTOM_SECRET:
-        required: false
 
 jobs:
   build:
@@ -71,8 +66,4 @@ jobs:
         with:
           environment: ${{ inputs.env }}
 
-      - name: Inject OIDC Credentials (Optional)
-        if: ${{ secrets.OIDC_TOKEN != '' }}
-        run: |
-          echo "Injecting OIDC credentials"
-          echo "${{ secrets.OIDC_TOKEN }}" | some-decryption-or-usage
+   
