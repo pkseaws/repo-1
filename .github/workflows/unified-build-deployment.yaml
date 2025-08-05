@@ -1,48 +1,78 @@
-name: Unified Build and Deployment
+# repo-1/.github/workflows/unified-build-deployment.yaml
+name: Unified Build & Deployment
 
 on:
   workflow_call:
     inputs:
       language:
-        description: 'Language of the app (java/python)'
         required: true
         type: string
       env:
-        description: 'Deployment environment (dev/stage/prod)'
         required: true
         type: string
       upload_artifact:
-        description: 'Flag to upload artifact (true/false)'
-        required: true
+        required: false
         type: boolean
+        default: false
+    secrets:
+      OIDC_TOKEN:
+        required: false
+      CUSTOM_SECRET:
+        required: false
 
 jobs:
   build:
     runs-on: ubuntu-latest
+    outputs:
+      artifact_name: ${{ steps.set-name.outputs.artifact_name }}
+
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v2
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-      - name: Build Application
-        id: build
-        run: |
-          if [ "${{ inputs.language }}" == "java" ]; then
-            echo "Building Java project..."
-            # Call the build-java action
-            uses: enterprise-cicd-pipeline/build-java@v1
-          elif [ "${{ inputs.language }}" == "python" ]; then
-            echo "Building Python project..."
-            # Call the build-python action
-            uses: enterprise-cicd-pipeline/build-python@v1
-          fi
+      - name: Set artifact name
+        id: set-name
+        run: echo "artifact_name=myapp-${{ inputs.language }}-${{ inputs.env }}" >> $GITHUB_OUTPUT
 
-  upload-artifact:
-    if: ${{ inputs.upload_artifact == 'true' }}
+      - name: Build Java
+        if: ${{ inputs.language == 'java' }}
+        uses: ./build-java
+
+      - name: Build Python
+        if: ${{ inputs.language == 'python' }}
+        uses: ./build-python
+
+      - name: Upload Artifact
+        if: ${{ inputs.upload_artifact }}
+        uses: ./upload-artifact
+        with:
+          name: ${{ steps.set-name.outputs.artifact_name }}
+
+  deploy:
     needs: build
     runs-on: ubuntu-latest
+    environment:
+      name: ${{ inputs.env }}
+      url: https://myapp-${{ inputs.env }}.example.com
+
     steps:
-      - name: Upload Build Artifact
-        uses: enterprise-cicd-pipeline/upload-artifact@v1
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Deploy Java
+        if: ${{ inputs.language == 'java' }}
+        uses: ./deploy-java
         with:
-          version: ${{ github.sha }}
-          env: ${{ inputs.env }}
+          environment: ${{ inputs.env }}
+
+      - name: Deploy Python
+        if: ${{ inputs.language == 'python' }}
+        uses: ./deploy-python
+        with:
+          environment: ${{ inputs.env }}
+
+      - name: Inject OIDC Credentials (Optional)
+        if: ${{ secrets.OIDC_TOKEN != '' }}
+        run: |
+          echo "Injecting OIDC credentials"
+          echo "${{ secrets.OIDC_TOKEN }}" | some-decryption-or-usage
