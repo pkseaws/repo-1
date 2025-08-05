@@ -1,0 +1,48 @@
+name: Unified Build and Deployment
+
+on:
+  workflow_call:
+    inputs:
+      language:
+        description: 'Language of the app (java/python)'
+        required: true
+        type: string
+      env:
+        description: 'Deployment environment (dev/stage/prod)'
+        required: true
+        type: string
+      upload_artifact:
+        description: 'Flag to upload artifact (true/false)'
+        required: true
+        type: boolean
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+
+      - name: Build Application
+        id: build
+        run: |
+          if [ "${{ inputs.language }}" == "java" ]; then
+            echo "Building Java project..."
+            # Call the build-java action
+            uses: enterprise-cicd-pipeline/build-java@v1
+          elif [ "${{ inputs.language }}" == "python" ]; then
+            echo "Building Python project..."
+            # Call the build-python action
+            uses: enterprise-cicd-pipeline/build-python@v1
+          fi
+
+  upload-artifact:
+    if: ${{ inputs.upload_artifact == 'true' }}
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Upload Build Artifact
+        uses: enterprise-cicd-pipeline/upload-artifact@v1
+        with:
+          version: ${{ github.sha }}
+          env: ${{ inputs.env }}
